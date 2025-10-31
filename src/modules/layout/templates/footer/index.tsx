@@ -1,5 +1,5 @@
-import { listCategories } from "@lib/data/categories"
-import { listCollections } from "@lib/data/collections"
+import { listCategories } from "@lib/data/categories-wc"
+import { listCollections } from "@lib/data/collections-wc"
 import { Text, clx } from "@medusajs/ui"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"

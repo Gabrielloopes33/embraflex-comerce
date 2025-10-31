@@ -12,7 +12,7 @@ const S3_PATHNAME = process.env.MEDUSA_CLOUD_S3_PATHNAME
  * @type {import('next').NextConfig}
  */
 const nextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: false, // Desabilitado para evitar duplicação de requisições em dev
   logging: {
     fetches: {
       fullUrl: true,
@@ -41,6 +41,11 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "medusa-server-testing.s3.us-east-1.amazonaws.com",
+      },
+      // WooCommerce image domain
+      {
+        protocol: "https",
+        hostname: "embraflexbr.com.br",
       },
       ...(S3_HOSTNAME && S3_PATHNAME
         ? [

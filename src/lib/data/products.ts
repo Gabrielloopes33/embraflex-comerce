@@ -1,11 +1,10 @@
 "use server"
 
-import { sdk } from "@lib/config"
-import { sortProducts } from "@lib/util/sort-products"
-import { HttpTypes } from "@medusajs/types"
+// Import WooCommerce functions instead of Medusa
+import { listProducts as listProductsWC, listProductsWithSort as listProductsWithSortWC, retrieveProduct as retrieveProductWC, getProductByHandle as getProductByHandleWC } from "./products-wc"
+import { getRegion, retrieveRegion } from "./regions-wc"
+import { MappedProduct } from "../../types/woocommerce"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
-import { getAuthHeaders, getCacheOptions } from "./cookies"
-import { getRegion, retrieveRegion } from "./regions"
 
 export const listProducts = async ({
   pageParam = 1,
@@ -14,123 +13,66 @@ export const listProducts = async ({
   regionId,
 }: {
   pageParam?: number
-  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductListParams
+  queryParams?: {
+    limit?: number
+    offset?: number
+    category?: string
+    search?: string
+    orderby?: string
+    order?: "asc" | "desc"
+  }
   countryCode?: string
   regionId?: string
 }): Promise<{
-  response: { products: HttpTypes.StoreProduct[]; count: number }
+  response: { products: MappedProduct[]; count: number }
   nextPage: number | null
-  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductListParams
+  queryParams?: any
 }> => {
-  if (!countryCode && !regionId) {
-    throw new Error("Country code or region ID is required")
-  }
-
-  const limit = queryParams?.limit || 12
-  const _pageParam = Math.max(pageParam, 1)
-  const offset = _pageParam === 1 ? 0 : (_pageParam - 1) * limit
-
-  let region: HttpTypes.StoreRegion | undefined | null
-
-  if (countryCode) {
-    region = await getRegion(countryCode)
-  } else {
-    region = await retrieveRegion(regionId!)
-  }
-
-  if (!region) {
-    return {
-      response: { products: [], count: 0 },
-      nextPage: null,
-    }
-  }
-
-  const headers = {
-    ...(await getAuthHeaders()),
-  }
-
-  const next = {
-    ...(await getCacheOptions("products")),
-  }
-
-  return sdk.client
-    .fetch<{ products: HttpTypes.StoreProduct[]; count: number }>(
-      `/store/products`,
-      {
-        method: "GET",
-        query: {
-          limit,
-          offset,
-          region_id: region?.id,
-          fields:
-            "*variants.calculated_price,+variants.inventory_quantity,*variants.images,+metadata,+tags,",
-          ...queryParams,
-        },
-        headers,
-        next,
-        cache: "force-cache",
-      }
-    )
-    .then(({ products, count }) => {
-      const nextPage = count > offset + limit ? pageParam + 1 : null
-
-      return {
-        response: {
-          products,
-          count,
-        },
-        nextPage: nextPage,
-        queryParams,
-      }
-    })
+  // For WooCommerce, we don't need region validation like Medusa
+  // Just pass through to our WooCommerce function
+  return listProductsWC({
+    pageParam,
+    queryParams,
+    countryCode,
+    regionId,
+  })
 }
 
 /**
- * This will fetch 100 products to the Next.js cache and sort them based on the sortBy parameter.
- * It will then return the paginated products based on the page and limit parameters.
+ * This will fetch products from WooCommerce and sort them based on the sortBy parameter.
  */
 export const listProductsWithSort = async ({
-  page = 0,
+  page = 1,
   queryParams,
   sortBy = "created_at",
   countryCode,
 }: {
   page?: number
-  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
+  queryParams?: {
+    limit?: number
+    category?: string
+    search?: string
+  }
   sortBy?: SortOptions
   countryCode: string
 }): Promise<{
-  response: { products: HttpTypes.StoreProduct[]; count: number }
+  response: { products: MappedProduct[]; count: number }
   nextPage: number | null
-  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
+  queryParams?: any
 }> => {
-  const limit = queryParams?.limit || 12
-
-  const {
-    response: { products, count },
-  } = await listProducts({
-    pageParam: 0,
-    queryParams: {
-      ...queryParams,
-      limit: 100,
-    },
+  // Pass through to our WooCommerce function
+  return listProductsWithSortWC({
+    page,
+    queryParams,
+    sortBy,
     countryCode,
   })
+}
 
-  const sortedProducts = sortProducts(products, sortBy)
+export const retrieveProduct = async (id: string): Promise<MappedProduct | null> => {
+  return retrieveProductWC(id)
+}
 
-  const pageParam = (page - 1) * limit
-
-  const nextPage = count > pageParam + limit ? pageParam + limit : null
-
-  const paginatedProducts = sortedProducts.slice(pageParam, pageParam + limit)
-
-  return {
-    response: {
-      products: paginatedProducts,
-      count,
-    },
-    nextPage,
-    queryParams,
-  }
+export const getProductByHandle = async (handle: string): Promise<MappedProduct | null> => {
+  return getProductByHandleWC(handle)
 }

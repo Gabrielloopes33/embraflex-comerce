@@ -1,7 +1,6 @@
 import { Text } from "@medusajs/ui"
-import { listProducts } from "@lib/data/products"
-import { getProductPrice } from "@lib/util/get-product-price"
-import { HttpTypes } from "@medusajs/types"
+import { MappedProduct } from "../../../../types/woocommerce"
+import { MockRegion } from "@lib/data/regions-wc"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Thumbnail from "../thumbnail"
 import PreviewPrice from "./price"
@@ -11,22 +10,24 @@ export default async function ProductPreview({
   isFeatured,
   region,
 }: {
-  product: HttpTypes.StoreProduct
+  product: MappedProduct
   isFeatured?: boolean
-  region: HttpTypes.StoreRegion
+  region: MockRegion
 }) {
-  // const pricedProduct = await listProducts({
-  //   regionId: region.id,
-  //   queryParams: { id: [product.id!] },
-  // }).then(({ response }) => response.products[0])
+  // Get the cheapest price from variants
+  const cheapestPrice = product.variants && product.variants.length > 0 
+    ? product.variants.reduce((min, variant) => {
+        const price = variant.calculated_price?.calculated_amount || 0
+        return price < min ? price : min
+      }, product.variants[0].calculated_price?.calculated_amount || 0)
+    : 0
 
-  // if (!pricedProduct) {
-  //   return null
-  // }
-
-  const { cheapestPrice } = getProductPrice({
-    product,
-  })
+  const formattedPrice = cheapestPrice 
+    ? {
+        calculated_amount: cheapestPrice,
+        currency_code: region.currency_code,
+      }
+    : null
 
   return (
     <LocalizedClientLink href={`/products/${product.handle}`} className="group">
@@ -42,7 +43,14 @@ export default async function ProductPreview({
             {product.title}
           </Text>
           <div className="flex items-center gap-x-2">
-            {cheapestPrice && <PreviewPrice price={cheapestPrice} />}
+            {cheapestPrice > 0 && (
+              <Text className="text-ui-fg-muted" data-testid="price">
+                {new Intl.NumberFormat('pt-BR', {
+                  style: 'currency',
+                  currency: region.currency_code,
+                }).format(cheapestPrice / 100)}
+              </Text>
+            )}
           </div>
         </div>
       </div>

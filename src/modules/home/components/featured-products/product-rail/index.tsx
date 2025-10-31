@@ -1,5 +1,6 @@
-import { listProducts } from "@lib/data/products"
-import { HttpTypes } from "@medusajs/types"
+import { listProducts } from "@lib/data/products-wc"
+import { MockCollection } from "@lib/data/collections-wc"
+import { MockRegion } from "@lib/data/regions-wc"
 import { Text } from "@medusajs/ui"
 
 import InteractiveLink from "@modules/common/components/interactive-link"
@@ -9,21 +10,34 @@ export default async function ProductRail({
   collection,
   region,
 }: {
-  collection: HttpTypes.StoreCollection
-  region: HttpTypes.StoreRegion
+  collection: MockCollection
+  region: MockRegion
 }) {
+  // Fetch real products from WooCommerce
   const {
     response: { products: pricedProducts },
   } = await listProducts({
-    regionId: region.id,
-    queryParams: {
-      collection_id: collection.id,
-      fields: "*variants.calculated_price",
-    },
+    pageParam: 1,
+    queryParams: { limit: 6 },
+    countryCode: "br",
   })
 
-  if (!pricedProducts) {
-    return null
+  if (!pricedProducts || pricedProducts.length === 0) {
+    return (
+      <div className="content-container py-12 small:py-24">
+        <div className="flex justify-between mb-8">
+          <Text className="txt-xlarge">{collection.title}</Text>
+          <InteractiveLink href={`/collections/${collection.handle}`}>
+            Ver todos
+          </InteractiveLink>
+        </div>
+        <div className="text-center py-8">
+          <Text className="txt-medium text-ui-fg-muted">
+            Nenhum produto encontrado para esta coleção
+          </Text>
+        </div>
+      </div>
+    )
   }
 
   return (

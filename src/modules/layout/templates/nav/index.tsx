@@ -1,13 +1,14 @@
 import { Suspense } from "react"
+import Image from "next/image"
 
-import { listRegions } from "@lib/data/regions"
-import { StoreRegion } from "@medusajs/types"
+import { listRegions } from "@lib/data/regions-wc"
+import { MockRegion } from "@lib/data/regions-wc"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
 import SideMenu from "@modules/layout/components/side-menu"
 
 export default async function Nav() {
-  const regions = await listRegions().then((regions: StoreRegion[]) => regions)
+  const regions = await listRegions().then((regions: MockRegion[]) => regions)
 
   return (
     <div className="sticky top-0 inset-x-0 z-50 group">
@@ -22,10 +23,17 @@ export default async function Nav() {
           <div className="flex items-center h-full">
             <LocalizedClientLink
               href="/"
-              className="txt-compact-xlarge-plus hover:text-ui-fg-base uppercase"
+              className="hover:opacity-80 transition-opacity duration-200"
               data-testid="nav-store-link"
             >
-              Medusa Store
+              <Image
+                src="/images/Logo-Embraflex-01.png"
+                alt="Embraflex Logo"
+                width={240}
+                height={80}
+                className="h-24 w-auto max-w-[400px]"
+                priority
+              />
             </LocalizedClientLink>
           </div>
 

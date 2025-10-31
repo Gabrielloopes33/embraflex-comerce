@@ -1,59 +1,38 @@
-import { HttpTypes } from "@medusajs/types"
 import { NextRequest, NextResponse } from "next/server"
 
-const BACKEND_URL = process.env.MEDUSA_BACKEND_URL
-const PUBLISHABLE_API_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
 const DEFAULT_REGION = process.env.NEXT_PUBLIC_DEFAULT_REGION || "us"
 
+// Mock region type for WooCommerce compatibility
+interface MockRegion {
+  id: string
+  name: string
+  currency_code: string
+}
+
 const regionMapCache = {
-  regionMap: new Map<string, HttpTypes.StoreRegion>(),
+  regionMap: new Map<string, MockRegion>(),
   regionMapUpdated: Date.now(),
 }
 
 async function getRegionMap(cacheId: string) {
   const { regionMap, regionMapUpdated } = regionMapCache
 
-  if (!BACKEND_URL) {
-    throw new Error(
-      "Middleware.ts: Error fetching regions. Did you set up regions in your Medusa Admin and define a MEDUSA_BACKEND_URL environment variable? Note that the variable is no longer named NEXT_PUBLIC_MEDUSA_BACKEND_URL."
-    )
-  }
-
   if (
     !regionMap.keys().next().value ||
     regionMapUpdated < Date.now() - 3600 * 1000
   ) {
-    // Fetch regions from Medusa. We can't use the JS client here because middleware is running on Edge and the client needs a Node environment.
-    const { regions } = await fetch(`${BACKEND_URL}/store/regions`, {
-      headers: {
-        "x-publishable-api-key": PUBLISHABLE_API_KEY!,
-      },
-      next: {
-        revalidate: 3600,
-        tags: [`regions-${cacheId}`],
-      },
-      cache: "force-cache",
-    }).then(async (response) => {
-      const json = await response.json()
+    // Simplified for Brazil only
+    const mockRegions = [
+      { id: "reg_br", name: "Brasil", currency_code: "BRL" },
+    ]
 
-      if (!response.ok) {
-        throw new Error(json.message)
-      }
+    // Create a map of country codes to regions - only Brazil
+    const countryRegionMap = [
+      { country: "br", region: mockRegions[0] },
+    ]
 
-      return json
-    })
-
-    if (!regions?.length) {
-      throw new Error(
-        "No regions found. Please set up regions in your Medusa Admin."
-      )
-    }
-
-    // Create a map of country codes to regions.
-    regions.forEach((region: HttpTypes.StoreRegion) => {
-      region.countries?.forEach((c) => {
-        regionMapCache.regionMap.set(c.iso_2 ?? "", region)
-      })
+    countryRegionMap.forEach(({ country, region }) => {
+      regionMapCache.regionMap.set(country, region)
     })
 
     regionMapCache.regionMapUpdated = Date.now()
@@ -69,7 +48,7 @@ async function getRegionMap(cacheId: string) {
  */
 async function getCountryCode(
   request: NextRequest,
-  regionMap: Map<string, HttpTypes.StoreRegion | number>
+  regionMap: Map<string, MockRegion>
 ) {
   try {
     let countryCode
