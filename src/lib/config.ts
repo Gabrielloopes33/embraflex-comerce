@@ -1,15 +1,13 @@
 import Medusa from "@medusajs/js-sdk"
 
 // Defaults to standard port for Medusa server
-let MEDUSA_BACKEND_URL = "http://localhost:9000"
-
-if (process.env.MEDUSA_BACKEND_URL) {
-  MEDUSA_BACKEND_URL = process.env.MEDUSA_BACKEND_URL
-}
+// Use uma URL de mock para evitar erro de conexão no build
+let MEDUSA_BACKEND_URL = process.env.MEDUSA_BACKEND_URL || "https://mock-medusa-backend.example.com"
 
 // SDK do Medusa (opcional - usado apenas se você tiver um backend Medusa)
+// Configuração mínima para evitar erros durante o build
 export const sdk = new Medusa({
   baseUrl: MEDUSA_BACKEND_URL,
-  debug: process.env.NODE_ENV === "development",
+  debug: false, // Desabilitar debug no build
   publishableKey: process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || "pk_test",
 })
