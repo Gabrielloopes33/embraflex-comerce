@@ -1,7 +1,13 @@
 "use server"
 
 import { cache } from "react"
-import { fetchWooCommerceProducts, mapWooCommerceProduct, fetchWooCommerceProduct } from "./woocommerce"
+import { 
+  fetchWooCommerceProducts, 
+  mapWooCommerceProduct, 
+  fetchWooCommerceProduct,
+  fetchWooCommerceCategories,
+  fetchWooCommerceProductsByCategory 
+} from "./woocommerce"
 import { MappedProduct } from "../../types/woocommerce"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { getCachedProduct, setCachedProduct } from "../cache/product-cache"
@@ -227,3 +233,149 @@ const getCachedProductByHandle = cache(async (handle: string): Promise<MappedPro
 
 // Exportar a função wrapper que usa cache
 export const getProductByHandle = getCachedProductByHandle
+
+// Função para buscar produtos organizados por linhas de produto
+export async function getProductsByProductLines(): Promise<{
+  productLines: Array<{
+    id: string
+    name: string
+    slug: string
+    description: string
+    products: MappedProduct[]
+    count: number
+    isEmpty?: boolean
+    lineType: 'economica' | 'premium' | 'personalizada' | 'especial'
+    icon: string
+    color: string
+  }>
+}> {
+  try {
+    // Buscar todas as categorias
+    const allCategories = await fetchWooCommerceCategories()
+    
+    // Mapear categorias para linhas de produto conforme estrutura da tabela
+    const productLineMapping: Record<string, {
+      lineType: 'economica' | 'premium' | 'personalizada' | 'especial'
+      icon: string
+      color: string
+      displayName: string
+      description: string
+    }> = {
+      'sacoladepapel': {
+        lineType: 'economica',
+        icon: '🛍️',
+        color: 'blue',
+        displayName: 'Sacolas de Papel - Linha Econômica',
+        description: 'Sacolas de papel com excelente custo-benefício, ideais para o dia a dia do seu negócio'
+      },
+      'caixas': {
+        lineType: 'premium',
+        icon: '📦',
+        color: 'green',
+        displayName: 'Caixas Personalizadas - Linha Premium',
+        description: 'Caixas sob medida com acabamento premium para destacar sua marca'
+      },
+      'delivery': {
+        lineType: 'especial',
+        icon: '🚚',
+        color: 'orange',
+        displayName: 'Sacos Delivery - Linha Especial',
+        description: 'Soluções especializadas para delivery com praticidade e resistência'
+      },
+      'plastico': {
+        lineType: 'personalizada',
+        icon: '🎨',
+        color: 'purple',
+        displayName: 'Sacolas Plásticas - Linha Personalizada',
+        description: 'Sacolas plásticas totalmente customizáveis com sua identidade visual'
+      }
+    }
+
+    // Filtrar e organizar categorias por linhas de produto
+    const productLines = []
+    
+    for (const category of allCategories) {
+      const mapping = productLineMapping[category.slug]
+      if (mapping) {
+        let products: any[] = []
+        
+        if (category.count > 0) {
+          const result = await fetchWooCommerceProductsByCategory(category.id, 6)
+          products = result.products.map(mapWooCommerceProduct)
+        }
+        
+        productLines.push({
+          id: category.id.toString(),
+          name: mapping.displayName,
+          slug: category.slug,
+          description: mapping.description,
+          products: products,
+          count: category.count,
+          isEmpty: category.count === 0,
+          lineType: mapping.lineType,
+          icon: mapping.icon,
+          color: mapping.color
+        })
+      }
+    }
+
+    // Ordenar por prioridade: Econômica > Premium > Especial > Personalizada
+    const lineOrder = ['economica', 'premium', 'especial', 'personalizada']
+    const sortedLines = productLines.sort((a, b) => {
+      const orderA = lineOrder.indexOf(a.lineType)
+      const orderB = lineOrder.indexOf(b.lineType)
+      
+      if (orderA !== orderB) {
+        return orderA - orderB
+      }
+      
+      // Se mesmo tipo, ordenar por quantidade de produtos
+      return b.count - a.count
+    })
+
+    console.log('📊 Linhas de produto encontradas:', sortedLines.map(line => `${line.name} (${line.count} produtos)`))
+
+    return {
+      productLines: sortedLines
+    }
+  } catch (error) {
+    console.error("❌ Erro ao buscar produtos por linhas:", error)
+    return {
+      productLines: []
+    }
+  }
+}
+
+// Manter a função original para compatibilidade
+export async function getProductsByMainCategories(): Promise<{
+  categories: Array<{
+    id: string
+    name: string
+    slug: string
+    description: string
+    products: MappedProduct[]
+    count: number
+    isEmpty?: boolean
+  }>
+}> {
+  try {
+    const result = await getProductsByProductLines()
+    
+    return {
+      categories: result.productLines.map(line => ({
+        id: line.id,
+        name: line.name,
+        slug: line.slug,
+        description: line.description,
+        products: line.products,
+        count: line.count,
+        isEmpty: line.isEmpty
+      }))
+    }
+  } catch (error) {
+    console.error("❌ Erro ao buscar produtos por categorias:", error)
+    return {
+      categories: []
+    }
+  }
+}

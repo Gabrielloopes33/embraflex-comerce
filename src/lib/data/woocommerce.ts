@@ -200,7 +200,7 @@ export async function fetchWooCommerceProduct(id: string): Promise<WooCommercePr
 // Fetch categories from WooCommerce API
 export async function fetchWooCommerceCategories() {
   try {
-    const response = await fetch(`${wooCommerceApi.baseUrl}/products/categories`, {
+    const response = await fetch(`${wooCommerceApi.baseUrl}/products/categories?per_page=100`, {
       headers: wooCommerceApi.headers,
       next: { revalidate: 3600 }, // Cache for 1 hour
     })
@@ -213,5 +213,43 @@ export async function fetchWooCommerceCategories() {
   } catch (error) {
     console.error("Error fetching WooCommerce categories:", error)
     return []
+  }
+}
+
+// Fetch products by category ID
+export async function fetchWooCommerceProductsByCategory(categoryId: number, limit = 6): Promise<WooCommerceProductsResponse> {
+  try {
+    const params = new URLSearchParams({
+      category: categoryId.toString(),
+      per_page: limit.toString(),
+      status: "publish",
+      orderby: "date",
+      order: "desc"
+    })
+
+    const response = await fetch(`${wooCommerceApi.baseUrl}/products?${params}`, {
+      headers: wooCommerceApi.headers,
+      next: { revalidate: 300 },
+    })
+
+    if (!response.ok) {
+      throw new Error(`WooCommerce API error: ${response.status}`)
+    }
+
+    const products: WooCommerceProduct[] = await response.json()
+    const totalHeader = response.headers.get("x-wp-total")
+
+    return {
+      products,
+      total: totalHeader ? parseInt(totalHeader, 10) : products.length,
+      totalPages: 1,
+    }
+  } catch (error) {
+    console.error("Error fetching WooCommerce products by category:", error)
+    return {
+      products: [],
+      total: 0,
+      totalPages: 0,
+    }
   }
 }
