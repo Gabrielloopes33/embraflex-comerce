@@ -2,10 +2,19 @@ const c = require("ansi-colors")
 
 const requiredEnvs = [
   {
-    key: "NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY",
-    // TODO: we need a good doc to point this to
+    key: "WOOCOMMERCE_STORE_URL",
     description:
-      "Learn how to create a publishable key: https://docs.medusajs.com/v2/resources/storefront-development/publishable-api-keys",
+      "URL da sua loja WooCommerce (ex: https://sualoja.com.br)",
+  },
+  {
+    key: "WOOCOMMERCE_CONSUMER_KEY",
+    description:
+      "Consumer Key da API REST do WooCommerce. Gere em: WooCommerce > Configurações > Avançado > REST API",
+  },
+  {
+    key: "WOOCOMMERCE_CONSUMER_SECRET",
+    description:
+      "Consumer Secret da API REST do WooCommerce. Gere em: WooCommerce > Configurações > Avançado > REST API",
   },
 ]
 
