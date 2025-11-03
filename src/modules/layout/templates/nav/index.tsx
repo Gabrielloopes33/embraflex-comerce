@@ -1,5 +1,4 @@
 import { Suspense } from "react"
-import Image from "next/image"
 
 import { listRegions } from "@lib/data/regions-wc"
 import { MockRegion } from "@lib/data/regions-wc"
@@ -26,13 +25,10 @@ export default async function Nav() {
               className="hover:opacity-80 transition-opacity duration-200"
               data-testid="nav-store-link"
             >
-              <Image
+              <img
                 src="/images/Logo-Embraflex-01.png"
                 alt="Embraflex Logo"
-                width={240}
-                height={80}
-                className="h-24 w-auto max-w-[400px]"
-                priority
+                className="h-16 w-auto max-w-[240px]"
               />
             </LocalizedClientLink>
           </div>
